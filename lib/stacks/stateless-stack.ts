@@ -9,27 +9,11 @@ import {
   StackProps,
   RemovalPolicy,
   aws_ec2 as ec2,
-  aws_lambda as lambda,
-  aws_s3 as s3,
-  aws_certificatemanager as certificatemanager,
-  aws_route53 as route53,
-  aws_route53_targets as route53_targets,
   aws_elasticloadbalancingv2 as lbv2,
   aws_ecr as ecr,
   aws_ecs as ecs,
-  aws_logs as logs,
-  aws_iam as iam,
-  aws_codepipeline as codepipeline,
-  aws_codepipeline_actions as codepipeline_actions,
-  aws_codebuild as codebuild,
   aws_codedeploy as codedeploy,
-  aws_cloudfront as cloudfront,
-  aws_cloudfront_origins as cloudfront_origins,
-  aws_elasticache as elasticache,
-  aws_ssm as ssm,
-  aws_events as events,
-  aws_events_targets as events_targets,
-  aws_elasticloadbalancingv2 as elbv2,
+  aws_elasticloadbalancingv2_targets as elbv2Targets,
   Duration,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -103,38 +87,68 @@ export class StatelessResourceStack extends Stack {
       allowAllOutbound: true,
     });
     lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), "Allow inbound traffic on port 80");
-    lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), "Allow inbound traffic on port 443");
 
-    const loadBalancer = new lbv2.ApplicationLoadBalancer(this, `${deployEnv}-learn-alb`, {
-      loadBalancerName: `${deployEnv}-learn-alb`,
-      vpc: vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
-      },
+    const alb = new lbv2.ApplicationLoadBalancer(this, `${deployEnv}-alb`, {
+      vpc,
       internetFacing: true,
+      loadBalancerName: `${deployEnv}-learn-alb`,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       securityGroup: lbSecurityGroup,
     });
 
-    //default listener and rule
-    const httpListener = loadBalancer.addListener("listenerHttp", {
+    const listener = alb.addListener(`${deployEnv}-listener`, {
       port: 80,
       protocol: lbv2.ApplicationProtocol.HTTP,
-      defaultAction: lbv2.ListenerAction.fixedResponse(404, {
-        contentType: "text/html",
-        messageBody: "Not found"
+      defaultAction: lbv2.ListenerAction.fixedResponse(200, {
+        contentType: "text/plain",
+        messageBody: "Default response",
       }),
     });
-    
-    const backendBlueTg = httpListener.addTargets(`blueBackendTarget${deployEnv}`, {
-      priority: 1,
+
+    // Target Groups for blue/green
+    const blueTG = new lbv2.ApplicationTargetGroup(this, `${deployEnv}-tg-blue`, {
+      vpc,
       port: 8080,
       protocol: lbv2.ApplicationProtocol.HTTP,
-      conditions: [
-        lbv2.ListenerCondition.hostHeaders([`api.learn.com`]),
-      ],
-      targets: [this.backendService],
-      healthCheck: {
-        path: "/ping"
+      targetType: lbv2.TargetType.IP,
+      healthCheck: { path: "/ping" },
+    });
+
+    const greenTG = new lbv2.ApplicationTargetGroup(this, `${deployEnv}-tg-green`, {
+      vpc,
+      port: 8080,
+      protocol: lbv2.ApplicationProtocol.HTTP,
+      targetType: lbv2.TargetType.IP,
+      healthCheck: { path: "/ping" },
+    });
+
+    blueTG.addTarget(this.backendService);
+    greenTG.addTarget(this.backendService);
+
+    listener.addTargetGroups(`${deployEnv}-listener-tg`, {
+      targetGroups: [blueTG],
+      conditions: [lbv2.ListenerCondition.hostHeaders(["api.learn.com"])],
+      priority: 1,
+    });
+
+    // CodeDeploy ECS Application and Deployment Group
+    const cdApp = new codedeploy.EcsApplication(this, `${deployEnv}-cd-app`, {
+      applicationName: `${deployEnv}-ecs-codedeploy-app`,
+    });
+
+    new codedeploy.EcsDeploymentGroup(this, `${deployEnv}-cd-deployment-group`, {
+      application: cdApp,
+      service: this.backendService,
+      deploymentGroupName: `${deployEnv}-ecs-deployment-group`,
+      blueGreenDeploymentConfig: {
+        listener,
+        blueTargetGroup: blueTG,
+        greenTargetGroup: greenTG,
+        deploymentApprovalWaitTime: Duration.minutes(0),
+      },
+      deploymentConfig: codedeploy.EcsDeploymentConfig.ALL_AT_ONCE,
+      autoRollback: {
+        failedDeployment: true,
       },
     });
   }

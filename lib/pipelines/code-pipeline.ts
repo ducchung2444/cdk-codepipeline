@@ -118,6 +118,8 @@ export class CodePipelineStack extends Stack {
               ],
             }),
           ],
+          /** This tells CodePipeline “treat cdk.out as my artifact”. */
+          primaryOutputDirectory: 'cdk.out',
         }),
       }
     );
