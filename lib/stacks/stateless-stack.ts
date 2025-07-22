@@ -128,7 +128,10 @@ export class StatelessResourceStack extends Stack {
         protocol: lbv2.ApplicationProtocol.HTTP,
         targetType: lbv2.TargetType.IP,
         healthCheck: { path: '/ping' },
+<<<<<<< HEAD
         targets: [this.backendService],
+=======
+>>>>>>> 6cdae5a31d8566e4bd0c159059557a7d7eb5ffc9
       },
     );
 
