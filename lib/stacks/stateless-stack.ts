@@ -57,7 +57,7 @@ export class StatelessResourceStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    const backendContainer = taskDef.addContainer('backend', {
+    taskDef.addContainer('backend', {
       image: ecs.ContainerImage.fromEcrRepository(backendRepo),
       portMappings: [{ containerPort: 8080 }],
       stopTimeout: Duration.seconds(120),
@@ -128,10 +128,7 @@ export class StatelessResourceStack extends Stack {
         protocol: lbv2.ApplicationProtocol.HTTP,
         targetType: lbv2.TargetType.IP,
         healthCheck: { path: '/ping' },
-<<<<<<< HEAD
         targets: [this.backendService],
-=======
->>>>>>> 6cdae5a31d8566e4bd0c159059557a7d7eb5ffc9
       },
     );
 
