@@ -47,7 +47,7 @@ export class StatelessResourceStack extends Stack {
     /* ---------------------------------------------------------------------
        Task definition + ECR
     --------------------------------------------------------------------- */
-    const taskDef = new ecs.FargateTaskDefinition(
+    const taskDefBackend = new ecs.FargateTaskDefinition(
       this,
       `${deployEnv}-BackendTaskDef`,
     );
@@ -57,15 +57,41 @@ export class StatelessResourceStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    taskDef.addContainer('backend', {
+    taskDefBackend.addContainer('backend', {
       image: ecs.ContainerImage.fromEcrRepository(backendRepo),
       portMappings: [{ containerPort: 8080 }],
       stopTimeout: Duration.seconds(120),
-      environment: {}, // set if needed
-      secrets: {},     // set if needed
     });
 
     /* ---------------------------------------------------------------------
+       Application Load Balancer
+    --------------------------------------------------------------------- */
+    const lbSecurityGroup = new ec2.SecurityGroup(this, `${deployEnv}-learn-LoadBalancerSecurityGroup`, {
+      vpc: vpc,
+      allowAllOutbound: true,
+    });
+    lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), "Allow inbound traffic on port 443");    
+    
+    const loadBalancer = new lbv2.ApplicationLoadBalancer(this, `${deployEnv}-learn-alb`, {
+      loadBalancerName: `${deployEnv}-learn-alb`,
+      vpc: vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC,
+      },
+      internetFacing: true,
+      securityGroup: lbSecurityGroup,
+    });
+
+    const httpListener = loadBalancer.addListener("listenerHttp", {
+      port: 80,
+      protocol: lbv2.ApplicationProtocol.HTTP,
+      defaultAction: lbv2.ListenerAction.fixedResponse(404, {
+        contentType: "text/html",
+        messageBody: "get out"
+      }),
+    });
+
+        /* ---------------------------------------------------------------------
        ECS Service (CodeDeploy deployment controller)
     --------------------------------------------------------------------- */
     this.backendService = new ecs.FargateService(
@@ -73,112 +99,44 @@ export class StatelessResourceStack extends Stack {
       `${deployEnv}-BackendService`,
       {
         cluster: this.cluster,
-        taskDefinition: taskDef,
+        taskDefinition: taskDefBackend,
         serviceName: 'learn-backend-service',
         deploymentController: {
           type: ecs.DeploymentControllerType.CODE_DEPLOY,
         },
-        platformVersion: ecs.FargatePlatformVersion.VERSION1_4, // required for B/G
         desiredCount: infraStatus === 'on' ? 1 : 0,
         assignPublicIp: true,
-        healthCheckGracePeriod: Duration.seconds(60),
       },
     );
 
-    /* ---------------------------------------------------------------------
-       Application Load Balancer
-    --------------------------------------------------------------------- */
-    const albSg = new ec2.SecurityGroup(this, `${deployEnv}-ALBSG`, {
-      vpc,
-      allowAllOutbound: true,
-      description: 'ALB security group',
-    });
-    albSg.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(80),
-      'Allow HTTP from anywhere',
-    );
-
-    const alb = new lbv2.ApplicationLoadBalancer(this, `${deployEnv}-alb`, {
-      vpc,
-      internetFacing: true,
-      loadBalancerName: `${deployEnv}-learn-alb`,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      securityGroup: albSg,
-    });
-
-    const listener = alb.addListener(`${deployEnv}-listener`, {
-      port: 80,
-      protocol: lbv2.ApplicationProtocol.HTTP,
-      defaultAction: lbv2.ListenerAction.fixedResponse(200, {
-        contentType: 'text/plain',
-        messageBody: 'Default response',
-      }),
-    });
-
-    /* ---------------------------------------------------------------------
-       Target groups (blue / green)
-    --------------------------------------------------------------------- */
-    const blueTG = new lbv2.ApplicationTargetGroup(
-      this,
-      `${deployEnv}-tg-blue`,
-      {
-        vpc,
-        port: 8080,
-        protocol: lbv2.ApplicationProtocol.HTTP,
-        targetType: lbv2.TargetType.IP,
-        healthCheck: { path: '/ping' },
-        targets: [this.backendService],
-      },
-    );
-
-    const greenTG = new lbv2.ApplicationTargetGroup(
-      this,
-      `${deployEnv}-tg-green`,
-      {
-        vpc,
-        port: 8080,
-        protocol: lbv2.ApplicationProtocol.HTTP,
-        targetType: lbv2.TargetType.IP,
-        healthCheck: { path: '/ping' },
-        targets: [this.backendService],
-      },
-    );
-
-    // Primary rule to BLUE
-    listener.addTargetGroups(`${deployEnv}-listener-blue`, {
-      targetGroups: [blueTG],
-      conditions: [lbv2.ListenerCondition.hostHeaders(['api.learn.com'])],
+    const backendBlueTg = httpListener.addTargets(`blueBackendTarget${deployEnv}`, {
       priority: 1,
+      port: 8080,
+      protocol: lbv2.ApplicationProtocol.HTTP,
+      targets: [this.backendService],
+      healthCheck: {
+        path: "/ping"
+      },
     });
 
-    /* ---------------------------------------------------------------------
-       CodeDeploy blue/green config
-    --------------------------------------------------------------------- */
-    const cdApp = new codedeploy.EcsApplication(
-      this,
-      `${deployEnv}-EcsCdApp`,
-      {
-        applicationName: `${deployEnv}-ecs-codedeploy-app`,
+    const backendGreenTg = new lbv2.ApplicationTargetGroup(this, `greenBackendTarget${deployEnv}`, {
+      vpc: vpc,
+      port: 8080,
+      protocol: lbv2.ApplicationProtocol.HTTP,
+      targetType: lbv2.TargetType.IP,
+      healthCheck: {
+        path: "/ping"
       },
-    );
-
-    new codedeploy.EcsDeploymentGroup(
-      this,
-      `${deployEnv}-EcsCdDeploymentGroup`,
-      {
-        application: cdApp,
-        service: this.backendService,
-        deploymentGroupName: `${deployEnv}-ecs-deployment-group`,
-        blueGreenDeploymentConfig: {
-          listener,
-          blueTargetGroup: blueTG,
-          greenTargetGroup: greenTG,
-          deploymentApprovalWaitTime: Duration.minutes(0),
-        },
-        deploymentConfig: codedeploy.EcsDeploymentConfig.ALL_AT_ONCE,
-        autoRollback: { failedDeployment: true },
+    });
+    //Deploy
+    const ecsDeployBackendGroup = new codedeploy.EcsDeploymentGroup(this, 'backendBlueGreenDG', {
+      service: this.backendService,
+      blueGreenDeploymentConfig: {
+        blueTargetGroup: backendBlueTg,
+        greenTargetGroup: backendGreenTg,
+        listener: httpListener,
       },
-    );
+      deploymentConfig: codedeploy.EcsDeploymentConfig.ALL_AT_ONCE,
+    });
   }
 }
