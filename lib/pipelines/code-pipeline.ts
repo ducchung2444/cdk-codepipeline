@@ -5,11 +5,11 @@ import {
   aws_iam as iam,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { DevStage } from "@/stages/dev-stage";
-import { StgStage } from "@/stages/stg-stage";
-import { CODE_CONNECTION_ARN, REPO_BRANCH, REPO_STRING } from "@/configs/env";
-import { ENV_SSM_PARAMETER, INFRA_STATUS_SSM_PARAMETER } from "@/configs/constants";
-import { DeployEnvEnum } from "@/context/types";
+import { DevStage } from "lib/stages/dev-stage";
+import { StgStage } from "lib/stages/stg-stage";
+import { CODE_CONNECTION_ARN, REPO_BRANCH, REPO_STRING } from "lib/configs/env";
+import { ENV_SSM_PARAMETER, INFRA_STATUS_SSM_PARAMETER } from "lib/configs/constants";
+import { DeployEnvEnum } from "lib/context/types";
 
 interface CodePipelineStackProps extends StackProps {
   infraStatusDev: "on" | "off";

@@ -1,9 +1,9 @@
-import { DeployEnvEnum } from "@/context/types";
 import { Stage, StageProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
-// import { LambdaWithDepStack } from "@/constructs/lambda_with_dep";
-import { NetworkStack } from "@/stacks/network-stack";
-import { StatelessResourceStack } from "@/stacks/stateless-stack";
+import { DeployEnvEnum } from "lib/context/types";
+// import { LambdaWithDepStack } from "lib/constructs/lambda_with_dep";
+import { NetworkStack } from "lib/stacks/network-stack";
+import { StatelessResourceStack } from "lib/stacks/stateless-stack";
 
 interface AppStageProps extends StageProps {
   deployEnv: DeployEnvEnum;

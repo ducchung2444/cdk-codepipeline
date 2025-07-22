@@ -5,8 +5,8 @@ import {
   StackProps,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { DeployEnvEnum } from "@/context/types";
-import { ENV_CONFIG } from "@/configs/constants";
+import { DeployEnvEnum } from "lib/context/types";
+import { ENV_CONFIG } from "lib/configs/constants";
 
 interface NetworkProps extends StackProps {
   deployEnv: DeployEnvEnum;

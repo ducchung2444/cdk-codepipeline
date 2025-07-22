@@ -1,8 +1,8 @@
 import { Construct } from "constructs";
 import { aws_lambda as lambda, Duration, aws_iam as iam, aws_logs as logs, RemovalPolicy } from "aws-cdk-lib";
-import { DeployEnvEnum } from "@/context/types";
-import { ACCOUNT, REGION } from "@/configs/env";
-import { INFRA_STATUS_SSM_PARAMETER } from "@/configs/constants";
+import { DeployEnvEnum } from "lib/context/types";
+import { ACCOUNT, REGION } from "lib/configs/env";
+import { INFRA_STATUS_SSM_PARAMETER } from "lib/configs/constants";
 
 interface KickPipelineLambdaConstructProps {
   deployEnv: DeployEnvEnum.DEV | DeployEnvEnum.STG;

@@ -1,9 +1,9 @@
 import { Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { CodePipelineStack } from "@/pipelines/code-pipeline";
-import { INFRA_STATUS_SSM_PARAMETER } from "@/configs/constants";
-import { DeployEnvEnum } from "@/context/types";
-import { KickPipelineLambdaConstruct } from "@/constructs/kick-pipeline-lambda";
+import { CodePipelineStack } from "lib/pipelines/code-pipeline";
+import { INFRA_STATUS_SSM_PARAMETER } from "lib/configs/constants";
+import { DeployEnvEnum } from "lib/context/types";
+import { KickPipelineLambdaConstruct } from "lib/constructs/kick-pipeline-lambda";
 
 interface MainStackProps extends StackProps {
   infraStatusDev: "on" | "off";

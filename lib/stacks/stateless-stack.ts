@@ -33,7 +33,7 @@ import {
   Duration,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { DeployEnvEnum } from "@/context/types";
+import { DeployEnvEnum } from "lib/context/types";
 
 interface StatelessResourceProps extends StackProps {
   deployEnv: DeployEnvEnum;
@@ -116,23 +116,16 @@ export class StatelessResourceStack extends Stack {
     });
 
     //default listener and rule
-    loadBalancer.addListener("listenerHttp", {
+    const httpListener = loadBalancer.addListener("listenerHttp", {
       port: 80,
-      defaultAction: lbv2.ListenerAction.redirect({ port: "443", protocol: lbv2.ApplicationProtocol.HTTPS })
-    });
-
-    const httpsListener = loadBalancer.addListener("listenerHttps", {
-      port: 443,
-      protocol: lbv2.ApplicationProtocol.HTTPS,
-      certificates: [],
+      protocol: lbv2.ApplicationProtocol.HTTP,
       defaultAction: lbv2.ListenerAction.fixedResponse(404, {
         contentType: "text/html",
         messageBody: "Not found"
       }),
-      sslPolicy: lbv2.SslPolicy.TLS12
     });
     
-    const backendBlueTg = httpsListener.addTargets(`blueBackendTarget${deployEnv}`, {
+    const backendBlueTg = httpListener.addTargets(`blueBackendTarget${deployEnv}`, {
       priority: 1,
       port: 8080,
       protocol: lbv2.ApplicationProtocol.HTTP,

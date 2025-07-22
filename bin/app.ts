@@ -1,7 +1,7 @@
 import 'source-map-support/register';
 import * as cdk from "aws-cdk-lib";
-import { MainStack } from "@/stacks/main-stack";
-import { ACCOUNT, REGION } from "@/configs/env";
+import { MainStack } from "lib/stacks/main-stack";
+import { ACCOUNT, REGION } from "lib/configs/env";
 
 const app = new cdk.App();
 

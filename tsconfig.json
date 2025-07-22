@@ -20,9 +20,6 @@
     "strictPropertyInitialization": false,
     "typeRoots": ["./node_modules/@types"],
     "baseUrl": ".", // sets project root
-    "paths": {
-      "@/*": ["lib/*"] // allows `@/constructs/xyz` to mean `lib/constructs/xyz`
-    }
   },
   "exclude": ["node_modules", "cdk.out"]
 }

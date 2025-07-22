@@ -1,4 +1,4 @@
-import { DeployEnvEnum } from "@/context/types";
+import { DeployEnvEnum } from "lib/context/types";
 
 export const PROJECT = "learn";
 export const ENV_SSM_PARAMETER = `/cdk/${PROJECT}/env`;

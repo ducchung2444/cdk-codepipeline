@@ -1,7 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { DeployEnvEnum } from "@/context/types";
+import { DeployEnvEnum } from "lib/context/types";
 
 interface LambdaWithDepStackProps extends cdk.StackProps {
   stage: DeployEnvEnum;

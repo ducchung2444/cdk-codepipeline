@@ -1,7 +1,7 @@
 import { StageProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { AppStage } from "./app-stage";
-import { DeployEnvEnum } from "@/context/types";
+import { DeployEnvEnum } from "lib/context/types";
 
 interface DevStageProps extends StageProps {
   status: "on" | "off";
