@@ -24,7 +24,7 @@ export class AppStage extends Stage {
       stackName: `${deployEnv}-network`,
       env: env,
       deployEnv: deployEnv,
-    })
+    });
 
     const statelessResourceStack = new StatelessResourceStack(this, 'StatelessResource', {
       stackName: `${deployEnv}-stateless-resource`,
@@ -32,8 +32,8 @@ export class AppStage extends Stage {
       vpc: networkStack.vpc,
       deployEnv: deployEnv,
       infraStatus: status
-    })
+    });
 
-    statelessResourceStack.addDependency(networkStack)
+    statelessResourceStack.addDependency(networkStack);
   }
 }
