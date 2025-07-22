@@ -51,14 +51,14 @@ export class CodePipelineStack extends Stack {
             `aws ssm get-parameter --with-decryption --name ${ENV_SSM_PARAMETER} --output text --query 'Parameter.Value' > .env`,
             `INFRA_STATUS_DEV=$(aws ssm get-parameter --name ${INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV]} --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')`,
             `INFRA_STATUS_STG=$(aws ssm get-parameter --name ${INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG]} --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')`,
-            `echo "INFRA_STATUS_DEV: $INFRA_STATUS_DEV"`,
-            `echo "INFRA_STATUS_STG: $INFRA_STATUS_STG"`,
             "curl -fsSL https://bun.sh/install | bash",
             'export PATH="$HOME/.bun/bin:$PATH"',
-            'bun install',
+            'bun install --frozen-lockfile',
             "bun x cdk synth --context infraStatusDev=$INFRA_STATUS_DEV --context infraStatusStg=$INFRA_STATUS_STG",
+            "aws s3 cp --recursive cdk.out s3://ndc-learn-s3-codebuild-out/codebuild/cdkout"
           ],
           rolePolicyStatements: [
+            // ssm
             new iam.PolicyStatement({
               resources: [
                 `arn:aws:ssm:${this.region}:${this.account}:parameter${ENV_SSM_PARAMETER}`,
@@ -67,6 +67,7 @@ export class CodePipelineStack extends Stack {
               ],
               actions: ["ssm:GetParameter*"],
             }),
+            // cloudformation & ecr
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
               actions: [
@@ -85,6 +86,7 @@ export class CodePipelineStack extends Stack {
               ],
               resources: ["*"],
             }),
+            // iam
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
               actions: [
@@ -95,10 +97,25 @@ export class CodePipelineStack extends Stack {
               ],
               resources: ["*"],
             }),
+            // ssm
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
               actions: ["ssm:GetParameter", "ssm:GetParameters"],
               resources: ["*"],
+            }),
+            // s3, to save cdk.out
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                "s3:PutObject",
+                "s3:PutObjectAcl",
+                "s3:GetBucketLocation",
+                "s3:ListBucket",
+              ],
+              resources: [
+                "arn:aws:s3:::ndc-learn-s3-codebuild-out",
+                "arn:aws:s3:::ndc-learn-s3-codebuild-out/*",
+              ],
             }),
           ],
         }),

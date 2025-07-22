@@ -11,7 +11,7 @@ export class DevStage extends AppStage {
   constructor(scope: Construct, id: string, props: DevStageProps) {
     super(scope, id, {
       ...props,
-      stage: DeployEnvEnum.DEV,
+      deployEnv: DeployEnvEnum.DEV,
       status: props.status,
     });
   }

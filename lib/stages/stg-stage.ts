@@ -11,7 +11,7 @@ export class StgStage extends AppStage {
   constructor(scope: Construct, id: string, props: StgStageProps) {
     super(scope, id, {
       ...props,
-      stage: DeployEnvEnum.STG,
+      deployEnv: DeployEnvEnum.STG,
       status: props.status,
     });
   }

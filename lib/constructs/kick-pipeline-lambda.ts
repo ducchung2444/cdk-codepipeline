@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { aws_lambda as lambda, Duration, aws_iam as iam } from "aws-cdk-lib";
+import { aws_lambda as lambda, Duration, aws_iam as iam, aws_logs as logs, RemovalPolicy } from "aws-cdk-lib";
 import { DeployEnvEnum } from "@/context/types";
 import { ACCOUNT, REGION } from "@/configs/env";
 import { INFRA_STATUS_SSM_PARAMETER } from "@/configs/constants";
@@ -36,6 +36,7 @@ export class KickPipelineLambdaConstruct extends Construct {
           SSM_PARAMETER_NAME: ssmParameterName,
         },
         timeout: Duration.minutes(5),
+        logRetention: logs.RetentionDays.ONE_WEEK,
       }
     );
     // Grant permissions to the Lambda
