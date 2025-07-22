@@ -29,6 +29,7 @@ import {
   aws_ssm as ssm,
   aws_events as events,
   aws_events_targets as events_targets,
+  aws_elasticloadbalancingv2 as elbv2,
   Duration,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -94,5 +95,54 @@ export class StatelessResourceStack extends Stack {
         assignPublicIp: true, //if not set, task will be place in private subnet
       }
     );
+    /**
+     * Load balancer
+     */
+    const lbSecurityGroup = new ec2.SecurityGroup(this, `${deployEnv}-learn-LoadBalancerSecurityGroup`, {
+      vpc: vpc,
+      allowAllOutbound: true,
+    });
+    lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), "Allow inbound traffic on port 80");
+    lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), "Allow inbound traffic on port 443");
+
+    const loadBalancer = new lbv2.ApplicationLoadBalancer(this, `${deployEnv}-learn-alb`, {
+      loadBalancerName: `${deployEnv}-learn-alb`,
+      vpc: vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC,
+      },
+      internetFacing: true,
+      securityGroup: lbSecurityGroup,
+    });
+
+    //default listener and rule
+    loadBalancer.addListener("listenerHttp", {
+      port: 80,
+      defaultAction: lbv2.ListenerAction.redirect({ port: "443", protocol: lbv2.ApplicationProtocol.HTTPS })
+    });
+
+    const httpsListener = loadBalancer.addListener("listenerHttps", {
+      port: 443,
+      protocol: lbv2.ApplicationProtocol.HTTPS,
+      certificates: [],
+      defaultAction: lbv2.ListenerAction.fixedResponse(404, {
+        contentType: "text/html",
+        messageBody: "Not found"
+      }),
+      sslPolicy: lbv2.SslPolicy.TLS12
+    });
+    
+    const backendBlueTg = httpsListener.addTargets(`blueBackendTarget${deployEnv}`, {
+      priority: 1,
+      port: 8080,
+      protocol: lbv2.ApplicationProtocol.HTTP,
+      conditions: [
+        lbv2.ListenerCondition.hostHeaders([`api.learn.com`]),
+      ],
+      targets: [this.backendService],
+      healthCheck: {
+        path: "/ping"
+      },
+    });
   }
 }
