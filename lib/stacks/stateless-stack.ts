@@ -111,6 +111,9 @@ export class StatelessResourceStack extends Stack {
 
     const backendBlueTg = httpListener.addTargets(`blueBackendTarget${deployEnv}`, {
       priority: 1,
+      conditions: [ // if priority, must have conditions
+        lbv2.ListenerCondition.pathPatterns(['/api/*']),
+      ],
       port: 8080,
       protocol: lbv2.ApplicationProtocol.HTTP,
       targets: [this.backendService],
