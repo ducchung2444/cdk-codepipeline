@@ -54,6 +54,7 @@ export class CodePipelineStack extends Stack {
             "curl -fsSL https://bun.sh/install | bash",
             'export PATH="$HOME/.bun/bin:$PATH"',
             'bun install --frozen-lockfile',
+            "bun x jest test/stacks/stateless-stack.test.ts",
             "bun x cdk synth --context infraStatusDev=$INFRA_STATUS_DEV --context infraStatusStg=$INFRA_STATUS_STG",
             "aws s3 cp --recursive cdk.out s3://ndc-learn-s3-codebuild-out/codebuild/cdkout"
           ],

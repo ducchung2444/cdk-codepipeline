@@ -27,11 +27,11 @@ export class MainStack extends Stack {
       ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
     });
 
-    new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructStg", {
-      deployEnv: DeployEnvEnum.STG,
-      pipelineName: codePipelineStack.pipelineName,
-      pipelineArn: codePipelineStack.pipelineArn,
-      ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
-    });
+    // new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructStg", {
+    //   deployEnv: DeployEnvEnum.STG,
+    //   pipelineName: codePipelineStack.pipelineName,
+    //   pipelineArn: codePipelineStack.pipelineArn,
+    //   ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
+    // });
   }
 }
