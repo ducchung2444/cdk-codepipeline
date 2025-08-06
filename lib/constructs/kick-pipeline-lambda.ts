@@ -28,7 +28,7 @@ export class KickPipelineLambdaConstruct extends Construct {
         functionName: `pipeline-trigger-${deployEnv}`,
         runtime: lambda.Runtime.PYTHON_3_11,
         handler: "pipeline-trigger.lambda_handler",
-        code: lambda.Code.fromAsset("assets", {
+        code: lambda.Code.fromAsset("assets/codepipeline", {
           exclude: ["*", "!pipeline-trigger.py"],
         }),
         environment: {

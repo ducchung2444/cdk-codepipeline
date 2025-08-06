@@ -5,8 +5,8 @@ import { ACCOUNT, REGION } from "lib/configs/env";
 
 const app = new cdk.App();
 
-console.log("infraStatusDev", app.node.tryGetContext("infraStatusDev"));
-console.log("infraStatusStg", app.node.tryGetContext("infraStatusStg"));
+console.log("DEBUG: infraStatusDev", app.node.tryGetContext("infraStatusDev"));
+console.log("DEBUG: infraStatusStg", app.node.tryGetContext("infraStatusStg"));
 
 const infraStatusDev = app.node.tryGetContext("infraStatusDev") != undefined ? app.node.tryGetContext("infraStatusDev") : "on";
 if (infraStatusDev !== "on" && infraStatusDev !== "off")

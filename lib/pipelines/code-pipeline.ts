@@ -47,16 +47,14 @@ export class CodePipelineStack extends Stack {
               connectionArn: CODE_CONNECTION_ARN,
             }
           ),
+          env: {
+            ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
+            INFRA_STATUS_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
+            INFRA_STATUS_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG]
+          },
           commands: [
-            `aws ssm get-parameter --with-decryption --name ${ENV_SSM_PARAMETER} --output text --query 'Parameter.Value' > .env`,
-            `INFRA_STATUS_DEV=$(aws ssm get-parameter --name ${INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV]} --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')`,
-            `INFRA_STATUS_STG=$(aws ssm get-parameter --name ${INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG]} --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')`,
-            "curl -fsSL https://bun.sh/install | bash",
-            'export PATH="$HOME/.bun/bin:$PATH"',
-            'bun install --frozen-lockfile',
-            "bun x jest test/stacks/stateless-stack.test.ts",
-            "bun x cdk synth --context infraStatusDev=$INFRA_STATUS_DEV --context infraStatusStg=$INFRA_STATUS_STG",
-            "aws s3 cp --recursive cdk.out s3://ndc-learn-s3-codebuild-out/codebuild/cdkout"
+            'chmod +x assets/codepipeline/commands.bash',
+            './assets/codepipeline/commands.bash'
           ],
           rolePolicyStatements: [
             // ssm
