@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load environment variables passed from CDK
-# ENV_SSM_PARAMETER, INFRA_STATUS_SSM_PARAMETER_DEV, INFRA_STATUS_SSM_PARAMETER_STG
-
+env | sort
 echo "DEBUG: test new env $TEST_NEW_ENV"
 
 # 1. Fetch .env from SSM
