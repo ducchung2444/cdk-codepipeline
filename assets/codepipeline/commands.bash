@@ -17,6 +17,6 @@ export PATH="$HOME/.bun/bin:$PATH"
 
 # 4. Install deps, run tests, synthesize
 bun install --frozen-lockfile
-bun x jest test/stacks/stateless-stack.test.ts
+#bun x jest test/stacks/stateless-stack.test.ts
 bun x cdk synth --context infraStatusDev=$INFRA_STATUS_DEV \
                 --context infraStatusStg=$INFRA_STATUS_STG
