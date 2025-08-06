@@ -2,7 +2,7 @@
 set -euo pipefail
 
 env | sort
-echo "DEBUG: test new env $TEST_NEW_ENV"
+echo "DEBUG: test new env $HEHE"
 
 # 1. Fetch .env from SSM
 aws ssm get-parameter --with-decryption --name "$ENV_SSM_PARAMETER" --output text --query 'Parameter.Value' > .env
