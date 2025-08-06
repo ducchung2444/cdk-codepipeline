@@ -50,7 +50,8 @@ export class CodePipelineStack extends Stack {
           env: {
             ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
             INFRA_STATUS_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
-            INFRA_STATUS_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG]
+            INFRA_STATUS_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
+            NEW_ENV: '123',
           },
           commands: [
             'chmod +x assets/codepipeline/commands.bash',
