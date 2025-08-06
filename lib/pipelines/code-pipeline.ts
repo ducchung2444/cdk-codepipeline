@@ -39,6 +39,7 @@ export class CodePipelineStack extends Stack {
       this,
       `learn-code-pipeline`,
       {
+        selfMutation: true,
         synth: new pipelines.CodeBuildStep(`project-synth`, {
           input: pipelines.CodePipelineSource.connection(
             REPO_STRING,
