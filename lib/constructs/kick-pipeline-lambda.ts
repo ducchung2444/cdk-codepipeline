@@ -1,8 +1,8 @@
-import { Construct } from "constructs";
-import { aws_lambda as lambda, Duration, aws_iam as iam, aws_logs as logs, RemovalPolicy } from "aws-cdk-lib";
-import { DeployEnvEnum } from "lib/context/types";
-import { ACCOUNT, REGION } from "lib/configs/env";
-import { INFRA_STATUS_SSM_PARAMETER } from "lib/configs/constants";
+import { Construct } from 'constructs';
+import { aws_iam as iam, aws_lambda as lambda, aws_logs as logs, Duration } from 'aws-cdk-lib';
+import { DeployEnvEnum } from 'lib/context/types';
+import { ACCOUNT, REGION } from 'lib/configs/env';
+import { INFRA_STATUS_SSM_PARAMETER } from 'lib/configs/constants';
 
 interface KickPipelineLambdaConstructProps {
   deployEnv: DeployEnvEnum.DEV | DeployEnvEnum.STG;
@@ -12,11 +12,7 @@ interface KickPipelineLambdaConstructProps {
 }
 
 export class KickPipelineLambdaConstruct extends Construct {
-  constructor(
-    scope: Construct,
-    id: string,
-    props: KickPipelineLambdaConstructProps
-  ) {
+  constructor(scope: Construct, id: string, props: KickPipelineLambdaConstructProps) {
     super(scope, id);
 
     const { deployEnv, pipelineName, pipelineArn, ssmParameterName } = props;
@@ -27,9 +23,9 @@ export class KickPipelineLambdaConstruct extends Construct {
       {
         functionName: `pipeline-trigger-${deployEnv}`,
         runtime: lambda.Runtime.PYTHON_3_11,
-        handler: "pipeline-trigger.lambda_handler",
-        code: lambda.Code.fromAsset("assets/codepipeline", {
-          exclude: ["*", "!pipeline-trigger.py"],
+        handler: 'pipeline-trigger.lambda_handler',
+        code: lambda.Code.fromAsset('assets/codepipeline', {
+          exclude: ['*', '!pipeline-trigger.py'],
         }),
         environment: {
           PIPELINE_NAME: pipelineName,
@@ -44,8 +40,8 @@ export class KickPipelineLambdaConstruct extends Construct {
     pipelineTriggerLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: [
-          "codepipeline:StartPipelineExecution",
-          "codepipeline:GetPipelineState",
+          'codepipeline:StartPipelineExecution',
+          'codepipeline:GetPipelineState',
         ],
         resources: [pipelineArn],
       })
@@ -53,7 +49,7 @@ export class KickPipelineLambdaConstruct extends Construct {
     // permission to get/put the ssm parameter
     pipelineTriggerLambda.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ["ssm:PutParameter", "ssm:GetParameter"],
+        actions: ['ssm:PutParameter', 'ssm:GetParameter'],
         resources: [
           `arn:aws:ssm:${REGION}:${ACCOUNT}:parameter${INFRA_STATUS_SSM_PARAMETER[deployEnv]}`,
         ],

@@ -5,11 +5,11 @@ import {
   aws_iam as iam,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { DevStage } from 'lib/stages/dev-stage';
-import { StgStage } from 'lib/stages/stg-stage';
+import { AppStage } from 'lib/stages/app-stage';
 import { CODE_CONNECTION_ARN, REPO_BRANCH, REPO_STRING } from 'lib/configs/env';
 import { ENV_SSM_PARAMETER, INFRA_STATUS_SSM_PARAMETER } from 'lib/configs/constants';
 import { DeployEnvEnum } from 'lib/context/types';
+import { KickPipelineLambdaConstruct } from 'lib/constructs/kick-pipeline-lambda';
 
 interface CodePipelineStackProps extends StackProps {
   infraStatusDev: 'on' | 'off';
@@ -17,41 +17,34 @@ interface CodePipelineStackProps extends StackProps {
 }
 
 export class CodePipelineStack extends Stack {
-  readonly pipelineName: string;
-  readonly pipelineArn: string;
-
   constructor(scope: Construct, id: string, props: CodePipelineStackProps) {
     super(scope, id, props);
 
     const { env, infraStatusDev, infraStatusStg } = props;
 
-    const devStage = new DevStage(this, 'DevStage', {
+    const devStage = new AppStage(this, 'DevStage', {
       env: env,
       status: infraStatusDev,
+      deployEnv: DeployEnvEnum.DEV,
     });
 
-    const stgStage = new StgStage(this, 'StgStage', {
+    const stgStage = new AppStage(this, 'StgStage', {
       env: env,
       status: infraStatusStg,
+      deployEnv: DeployEnvEnum.STG,
     });
 
     const pipeline = new pipelines.CodePipeline(
       this,
       `learn-code-pipeline`,
       {
-        selfMutation: true,
         synth: new pipelines.CodeBuildStep(`project-synth`, {
           input: pipelines.CodePipelineSource.connection(REPO_STRING, REPO_BRANCH, { connectionArn: CODE_CONNECTION_ARN }),
-          buildEnvironment: {
-            environmentVariables: {
-              ENV_SSM_PARAMETER: { value: ENV_SSM_PARAMETER },
-              INFRA_STATUS_DEV: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV] },
-              INFRA_STATUS_STG: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG] },
-              HEHE: { value: '456' },
-            }
-          },
           env: {
-            CAN_YOU_SEE_ME: '123'
+            ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
+            INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
+            INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
+            PROJECT: 'learn-codepipeline',
           },
           commands: [
             'chmod +x assets/codepipeline/commands.bash',
@@ -113,8 +106,8 @@ export class CodePipelineStack extends Stack {
                 's3:ListBucket',
               ],
               resources: [
-                'arn:aws:s3:::ndc-learn-s3-codebuild-out',
-                'arn:aws:s3:::ndc-learn-s3-codebuild-out/*',
+                'arn:aws:s3:::diff-file',
+                'arn:aws:s3:::diff-file/*',
               ],
             }),
           ],
@@ -126,18 +119,22 @@ export class CodePipelineStack extends Stack {
 
     pipeline.addStage(devStage);
 
-    pipeline.addStage(stgStage, {
-      pre: [
-        new pipelines.ManualApprovalStep('stg-deployment-approval', {
-          comment: `Please confirm for learn diff at below link!`,
-          reviewUrl: `https://infra.shirokumapower.jp/infra-diff?system=learn&env=stg`,
-        }),
-      ],
-    });
+    pipeline.addStage(stgStage);
 
     pipeline.buildPipeline();
 
-    this.pipelineName = pipeline.pipeline.pipelineName;
-    this.pipelineArn = pipeline.pipeline.pipelineArn;
+    // new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructDev", {
+    //   deployEnv: DeployEnvEnum.DEV,
+    //   pipelineName: pipeline.pipeline.pipelineName,
+    //   pipelineArn: pipeline.pipeline.pipelineArn,
+    //   ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
+    // });
+
+    // new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructStg", {
+    //   deployEnv: DeployEnvEnum.STG,
+    //   pipelineName: pipeline.pipeline.pipelineName,
+    //   pipelineArn: pipeline.pipeline.pipelineArn,
+    //   ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
+    // });
   }
 }
