@@ -40,11 +40,13 @@ export class CodePipelineStack extends Stack {
       {
         synth: new pipelines.CodeBuildStep(`project-synth`, {
           input: pipelines.CodePipelineSource.connection(REPO_STRING, REPO_BRANCH, { connectionArn: CODE_CONNECTION_ARN }),
-          env: {
-            ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
-            INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
-            INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
-            PROJECT: 'learn-codepipeline',
+          buildEnvironment: {
+            environmentVariables: {
+              ENV_SSM_PARAMETER: { value: ENV_SSM_PARAMETER },
+              INFRA_STATUS_SSM_DEV: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV] },
+              INFRA_STATUS_SSM_STG: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG] },
+              PROJECT: { value: 'learn-codepipeline' },
+            }
           },
           commands: [
             'chmod +x assets/codepipeline/commands.bash',
