@@ -4,7 +4,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { DeployEnvEnum } from "lib/context/types";
 
 interface LambdaWithDepStackProps extends cdk.StackProps {
-  stage: DeployEnvEnum;
+  deployEnv: DeployEnvEnum;
 }
 
 export class LambdaWithDepStack extends cdk.Stack {
@@ -12,7 +12,7 @@ export class LambdaWithDepStack extends cdk.Stack {
     super(scope, id, props);
 
     const backendFunction = new lambda.Function(this, "backend-function", {
-      functionName: `${props?.stage}-backend-function`,
+      functionName: `${props?.deployEnv}-backend-function`,
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset("assets/backend", {
         exclude: ["*", "!index.mjs", "!package.json", "!package-lock.json"],

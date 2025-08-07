@@ -1,9 +1,9 @@
 import { Stage, StageProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { DeployEnvEnum } from "lib/context/types";
-// import { LambdaWithDepStack } from "lib/constructs/lambda_with_dep";
-import { NetworkStack } from "lib/stacks/network-stack";
-import { StatelessResourceStack } from "lib/stacks/stateless-stack";
+import { LambdaWithDepStack } from "lib/constructs/lambda_with_dep";
+// import { NetworkStack } from "lib/stacks/network-stack";
+// import { StatelessResourceStack } from "lib/stacks/stateless-stack";
 
 interface AppStageProps extends StageProps {
   deployEnv: DeployEnvEnum;
@@ -16,24 +16,24 @@ export class AppStage extends Stage {
 
     const { env, deployEnv, status } = props;
 
-    // new LambdaWithDepStack(this, "LambdaWithDepStack", {
-    //   stage,
+    new LambdaWithDepStack(this, "LambdaWithDepStack", {
+      deployEnv: deployEnv,
+    });
+
+    // const networkStack = new NetworkStack(this, 'BaseNetwork', {
+    //   stackName: `${deployEnv}-network`,
+    //   env: env,
+    //   deployEnv: deployEnv,
     // });
 
-    const networkStack = new NetworkStack(this, 'BaseNetwork', {
-      stackName: `${deployEnv}-network`,
-      env: env,
-      deployEnv: deployEnv,
-    });
+    // const statelessResourceStack = new StatelessResourceStack(this, 'StatelessResource', {
+    //   stackName: `${deployEnv}-stateless-resource`,
+    //   env: env,
+    //   vpc: networkStack.vpc,
+    //   deployEnv: deployEnv,
+    //   infraStatus: status
+    // });
 
-    const statelessResourceStack = new StatelessResourceStack(this, 'StatelessResource', {
-      stackName: `${deployEnv}-stateless-resource`,
-      env: env,
-      vpc: networkStack.vpc,
-      deployEnv: deployEnv,
-      infraStatus: status
-    });
-
-    statelessResourceStack.addDependency(networkStack);
+    // statelessResourceStack.addDependency(networkStack);
   }
 }
