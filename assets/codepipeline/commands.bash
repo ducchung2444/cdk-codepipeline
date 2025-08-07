@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+env | sort
+
 # 1. Fetch .env from SSM
 aws ssm get-parameter --with-decryption --name "$ENV_SSM_PARAMETER" --output text --query 'Parameter.Value' > .env
 
