@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export TRIGGER_VAR="#{variables.TRIGGER}"
 echo "DEBUG: Pipeline trigger $TRIGGER_VAR"
 
 # 1. Fetch .env from SSM
