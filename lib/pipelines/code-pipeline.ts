@@ -37,23 +37,24 @@ export class CodePipelineStack extends Stack {
     const pipeline = new pipelines.CodePipeline(this, `learn-code-pipeline`, {
       synth: new pipelines.CodeBuildStep(`project-synth`, {
         input: pipelines.CodePipelineSource.connection(REPO_STRING, REPO_BRANCH, { connectionArn: CODE_CONNECTION_ARN }),
-        // buildEnvironment: {
-        //   environmentVariables: {
-        //     ENV_SSM_PARAMETER: { value: ENV_SSM_PARAMETER },
-        //     INFRA_STATUS_SSM_DEV: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV] },
-        //     INFRA_STATUS_SSM_STG: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG] },
-        //     PROJECT: { value: 'learn-codepipeline' },
-        //     TRIGGER_VAR: { value: '#{variables.TRIGGER}' },
-        //   },
-        // },
-        env: {
-          ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
-          INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
-          INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
-          LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
-          PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER,
-          PROJECT: 'learn-codepipeline',
+        buildEnvironment: {
+          environmentVariables: {
+            ENV_SSM_PARAMETER: { value: ENV_SSM_PARAMETER },
+            INFRA_STATUS_SSM_DEV: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV] },
+            INFRA_STATUS_SSM_STG: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG] },
+            PROJECT: { value: 'learn-codepipeline' },
+            LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: { value: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER },
+            PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: { value: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER },
+          },
         },
+        // env: {
+        //   ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
+        //   INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
+        //   INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
+        //   LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
+        //   PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER,
+        //   PROJECT: 'learn-codepipeline',
+        // },
         commands: ['chmod +x assets/codepipeline/commands.bash', './assets/codepipeline/commands.bash'],
         rolePolicyStatements: [
           // ssm
@@ -112,12 +113,24 @@ export class CodePipelineStack extends Stack {
     pipeline.addStage(stgStage, {
       pre: [
         new pipelines.CodeBuildStep('exit', {
-          env: {
-            PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER
+          buildEnvironment: {
+            environmentVariables: {
+              PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: { value: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER },
+            },
           },
+          // env: {
+          //   PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER
+          // },
           commands: ['chmod +x assets/codepipeline/pre-stg-stage-commands.bash', './assets/codepipeline/pre-stg-stage-commands.bash'],
+          rolePolicyStatements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: ['ssm:GetParameter'],
+              resources: [`arn:aws:ssm:*:*:parameter${PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER}`],
+            }),
+          ],
         }),
-        new pipelines.ManualApprovalStep('prod-deployment-approval', {
+        new pipelines.ManualApprovalStep('stg-deployment-approval', {
           comment: 'comment',
           reviewUrl: 'https://infra.shirokumapower.jp/',
         }),
