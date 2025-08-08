@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "DEBUG: Pipeline trigger $TRIGGER_VAR"
+TRIGGER_VAR=$(aws ssm get-parameter --name "/pipelines/$PIPELINE_NAME/$PIPELINE_EXECUTION_ID/TRIGGER" --with-decryption --query Parameter.Value --output text)
+echo "DEBUG: Pipeline trigger ${TRIGGER_VAR}"
 
 # 1. Fetch .env from SSM
 aws ssm get-parameter --with-decryption --name "$ENV_SSM_PARAMETER" --output text --query 'Parameter.Value' > .env

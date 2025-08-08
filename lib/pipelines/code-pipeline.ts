@@ -47,7 +47,7 @@ export class CodePipelineStack extends Stack {
           INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
           INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
           PROJECT: 'learn-codepipeline',
-          TRIGGER_VAR: '#{variables.TRIGGER}',
+          PIPELINE_EXECUTION_ID: '#{codepipeline.PipelineExecutionId}',
         },
         commands: ['chmod +x assets/codepipeline/commands.bash', './assets/codepipeline/commands.bash'],
         rolePolicyStatements: [
