@@ -8,8 +8,7 @@ export const INFRA_STATUS_SSM_PARAMETER = {
   [DeployEnvEnum.DEV]: `/cdk/${PROJECT}/infraStatusDev`,
   [DeployEnvEnum.STG]: `/cdk/${PROJECT}/infraStatusStg`,
 };
-export const LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER = `/cdk/${PROJECT}/lambdaTriggerTimeStamp`;
-export const PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER = `/cdk/${PROJECT}/pipelineTriggerSource`;
+
 export const ENV_CONFIG = {
   [DeployEnvEnum.DEV]: {
     cidrBlock: "10.0.0.0/16",

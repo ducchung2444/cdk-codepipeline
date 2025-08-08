@@ -1,12 +1,11 @@
-import { pipelines, Stack, StackProps, aws_iam as iam } from 'aws-cdk-lib';
+import { pipelines, Stack, StackProps, aws_iam as iam, aws_codepipeline as codepipeline } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { AppStage } from 'lib/stages/app-stage';
 import { CODE_CONNECTION_ARN, REPO_BRANCH, REPO_STRING } from 'lib/configs/env';
 import {
+  PROJECT,
   ENV_SSM_PARAMETER,
   INFRA_STATUS_SSM_PARAMETER,
-  LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
-  PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER,
 } from 'lib/configs/constants';
 import { DeployEnvEnum } from 'lib/context/types';
 import { KickPipelineLambdaConstruct } from 'lib/constructs/kick-pipeline-lambda';
@@ -20,21 +19,37 @@ export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: CodePipelineStackProps) {
     super(scope, id, props);
 
-    const { env, infraStatusDev, infraStatusStg } = props;
-
-    const devStage = new AppStage(this, 'DevStage', {
-      env: env,
-      status: infraStatusDev,
-      deployEnv: DeployEnvEnum.DEV,
-    });
+    const { env, infraStatusStg } = props;
 
     const stgStage = new AppStage(this, 'StgStage', {
       env: env,
       status: infraStatusStg,
       deployEnv: DeployEnvEnum.STG,
+      stageName: 'StgStage',
     });
 
+    const prodStage = new AppStage(this, 'ProdStage', {
+      env: env,
+      status: 'on',
+      deployEnv: DeployEnvEnum.PROD,
+      stageName: 'ProdStage',
+    });
+
+    const base = new codepipeline.Pipeline(this, `${PROJECT}-cp`, {
+      pipelineName: `${PROJECT}-cdk-pipeline`,
+      pipelineType: codepipeline.PipelineType.V2,  // ← v2 required for pipeline variables & stage conditions
+    });
+
+    const cfn = base.node.defaultChild as codepipeline.CfnPipeline;
+    cfn.variables = [
+      {
+        name: 'TRIGGER_SOURCE',
+        defaultValue: 'github', // default when the run is started by GitHub
+        description: 'pipeline trigger source: github|lambda',
+      },
+    ];
     const pipeline = new pipelines.CodePipeline(this, `learn-code-pipeline`, {
+      codePipeline: base,
       synth: new pipelines.CodeBuildStep(`project-synth`, {
         input: pipelines.CodePipelineSource.connection(REPO_STRING, REPO_BRANCH, { connectionArn: CODE_CONNECTION_ARN }),
         buildEnvironment: {
@@ -42,20 +57,13 @@ export class CodePipelineStack extends Stack {
             ENV_SSM_PARAMETER: { value: ENV_SSM_PARAMETER },
             INFRA_STATUS_SSM_DEV: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV] },
             INFRA_STATUS_SSM_STG: { value: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG] },
-            PROJECT: { value: 'learn-codepipeline' },
-            LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: { value: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER },
-            PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: { value: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER },
+            PROJECT: { value: PROJECT },
           },
         },
-        // env: {
-        //   ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
-        //   INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
-        //   INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
-        //   LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
-        //   PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER,
-        //   PROJECT: 'learn-codepipeline',
-        // },
-        commands: ['chmod +x assets/codepipeline/commands.bash', './assets/codepipeline/commands.bash'],
+        commands: [
+          'chmod +x assets/codepipeline/commands.bash',
+          './assets/codepipeline/commands.bash',
+        ],
         rolePolicyStatements: [
           // ssm
           new iam.PolicyStatement({
@@ -91,12 +99,6 @@ export class CodePipelineStack extends Stack {
             actions: ['iam:GetRole', 'iam:GetRolePolicy', 'iam:ListRolePolicies', 'iam:ListAttachedRolePolicies'],
             resources: ['*'],
           }),
-          // ssm
-          new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: ['ssm:GetParameter', 'ssm:GetParameters', 'ssm:PutParameter'],
-            resources: ['*'],
-          }),
           // s3
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
@@ -107,47 +109,60 @@ export class CodePipelineStack extends Stack {
       }),
     });
 
-    pipeline.addStage(devStage);
-    pipeline.addStage(stgStage, {
+    pipeline.addStage(stgStage);
+    pipeline.addStage(prodStage, {
       pre: [
-        new pipelines.CodeBuildStep('exit', {
-          buildEnvironment: {
-            environmentVariables: {
-              PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: { value: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER },
-            },
-          },
-          // env: {
-          //   PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER
-          // },
-          commands: ['chmod +x assets/codepipeline/pre-stg-stage-commands.bash', './assets/codepipeline/pre-stg-stage-commands.bash'],
-          rolePolicyStatements: [
-            new iam.PolicyStatement({
-              effect: iam.Effect.ALLOW,
-              actions: ['ssm:GetParameter'],
-              resources: [`arn:aws:ssm:*:*:parameter${PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER}`],
-            }),
-          ],
-        }),
         new pipelines.ManualApprovalStep('stg-deployment-approval', {
-          comment: 'comment',
+          comment: 'This is a comment',
           reviewUrl: 'https://infra.shirokumapower.jp/',
         }),
       ],
     });
+
     pipeline.buildPipeline();
 
-    new KickPipelineLambdaConstruct(this, 'KickPipelineLambdaConstructDev', {
-      deployEnv: DeployEnvEnum.DEV,
+    // Add a BeforeEntry → VariableCheck rule on the "Prod" stage to SKIP it unless TRIGGER_SOURCE == "github"
+    const prodIndex = base.stages.findIndex(s => s.stageName === 'ProdStage');
+    if (prodIndex === -1) {
+      throw new Error('Prod stage not found in the generated pipeline');
+    }
+
+    // CloudFormation expects a "VariableCheck" rule under BeforeEntry.
+    // NB: The "Variables" field is a JSON STRING per CodePipeline’s API.
+    // This condition means: if TRIGGER_SOURCE == "github" → condition passes → stage enters.
+    // Otherwise (e.g., TRIGGER_SOURCE == "lambda") → condition fails → result=SKIP engages → stage is skipped.
+    (cfn as codepipeline.CfnPipeline).addPropertyOverride(
+      `Stages.${prodIndex}.BeforeEntry`,
+      {
+        Conditions: [
+          {
+            Result: 'SKIP',  // engage SKIP when the rule fails
+            Rules: [
+              {
+                Name: "IsGithubTriggerRule",
+                RuleTypeId: {
+                  Category: 'Rule',
+                  Owner: 'AWS',
+                  Provider: 'VariableCheck',
+                  Version: '1',
+                },
+                Configuration: {
+                  Variable: '#{variables.TRIGGER_SOURCE}',  // pipeline-level variable
+                  Value: 'github',
+                  Operator: 'EQ',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructStg", {
+      deployEnv: DeployEnvEnum.STG,
       pipelineName: pipeline.pipeline.pipelineName,
       pipelineArn: pipeline.pipeline.pipelineArn,
-      ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
+      ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
     });
-
-    // new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructStg", {
-    //   deployEnv: DeployEnvEnum.STG,
-    //   pipelineName: pipeline.pipeline.pipelineName,
-    //   pipelineArn: pipeline.pipeline.pipelineArn,
-    //   ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
-    // });
   }
 }

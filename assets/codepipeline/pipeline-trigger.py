@@ -2,7 +2,6 @@ import json
 import boto3
 import os
 import logging
-import time
 
 # Configure logging
 logger = logging.getLogger()
@@ -15,7 +14,6 @@ events_client = boto3.client('events')
 # READ ENV VARIABLES
 PIPELINE_NAME = os.environ['PIPELINE_NAME']
 INFRA_STATUS_SSM_PARAMETER_NAME = os.environ['INFRA_STATUS_SSM_PARAMETER_NAME']
-LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER_NAME = os.environ['LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER_NAME']
 
 
 def lambda_handler(event, context):
@@ -34,15 +32,11 @@ def trigger_pipeline(infra_status: str):
         Overwrite=True,
         Description='learn infra status (set by Lambda)',
     )
-    ssm.put_parameter(
-        Name=LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER_NAME,
-        Value=str(time.time()),
-        Type='String',
-        Overwrite=True,
-        Description='lambda trigger pipeline timestamp',
-    )
 
-    response = codepipeline.start_pipeline_execution(name=PIPELINE_NAME)
+    response = codepipeline.start_pipeline_execution(
+        name=PIPELINE_NAME,
+        variables=[{"name": "TRIGGER_SOURCE", "value": "lambda"}]
+    )
 
 
 def ok():
