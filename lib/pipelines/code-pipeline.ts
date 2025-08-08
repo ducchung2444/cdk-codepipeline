@@ -40,14 +40,6 @@ export class CodePipelineStack extends Stack {
       pipelineType: codepipeline.PipelineType.V2,  // ← v2 required for pipeline variables & stage conditions
     });
 
-    const cfn = base.node.defaultChild as codepipeline.CfnPipeline;
-    cfn.variables = [
-      {
-        name: 'TRIGGER_SOURCE',
-        defaultValue: 'github', // default when the run is started by GitHub
-        description: 'pipeline trigger source: github|lambda',
-      },
-    ];
     const pipeline = new pipelines.CodePipeline(this, `learn-code-pipeline`, {
       codePipeline: base,
       synth: new pipelines.CodeBuildStep(`project-synth`, {
@@ -127,10 +119,14 @@ export class CodePipelineStack extends Stack {
       throw new Error('Prod stage not found in the generated pipeline');
     }
 
-    // CloudFormation expects a "VariableCheck" rule under BeforeEntry.
-    // NB: The "Variables" field is a JSON STRING per CodePipeline’s API.
-    // This condition means: if TRIGGER_SOURCE == "github" → condition passes → stage enters.
-    // Otherwise (e.g., TRIGGER_SOURCE == "lambda") → condition fails → result=SKIP engages → stage is skipped.
+    const cfn = base.node.defaultChild as codepipeline.CfnPipeline;
+    cfn.variables = [
+      {
+        name: 'TRIGGER_SOURCE',
+        defaultValue: 'github', // default when the run is started by GitHub
+        description: 'pipeline trigger source: github|lambda',
+      },
+    ];
     (cfn as codepipeline.CfnPipeline).addPropertyOverride(
       `Stages.${prodIndex}.BeforeEntry`,
       {
