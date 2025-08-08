@@ -94,18 +94,16 @@ export class CodePipelineStack extends Stack {
           // ssm
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+            actions: ['ssm:GetParameter', 'ssm:GetParameters', 'ssm:PutParameter'],
             resources: ['*'],
           }),
-          // s3, to save cdk.out
+          // s3
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['s3:PutObject', 's3:PutObjectAcl', 's3:GetBucketLocation', 's3:ListBucket'],
             resources: ['arn:aws:s3:::diff-file', 'arn:aws:s3:::diff-file/*'],
           }),
         ],
-        /** This tells CodePipeline “treat cdk.out as my artifact”. */
-        primaryOutputDirectory: 'cdk.out',
       }),
     });
 
