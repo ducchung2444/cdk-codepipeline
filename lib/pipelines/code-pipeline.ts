@@ -14,13 +14,14 @@ import { KickPipelineLambdaConstruct } from 'lib/constructs/kick-pipeline-lambda
 interface CodePipelineStackProps extends StackProps {
   infraStatusDev: 'on' | 'off';
   infraStatusStg: 'on' | 'off';
+  trigger: string;
 }
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: CodePipelineStackProps) {
     super(scope, id, props);
 
-    const { env, infraStatusDev, infraStatusStg } = props;
+    const { env, infraStatusDev, infraStatusStg, trigger } = props;
 
     const devStage = new AppStage(this, 'DevStage', {
       env: env,
@@ -121,16 +122,25 @@ export class CodePipelineStack extends Stack {
 
     pipeline.addStage(devStage);
 
-    pipeline.addStage(stgStage);
+    if (trigger === 'github') {
+      pipeline.addStage(stgStage, {
+        pre: [
+          new pipelines.ManualApprovalStep('prod-deployment-approval', {
+            comment: `comment`,
+            reviewUrl: `https://infra.shirokumapower.jp/`,
+          }),
+        ],
+      });
+    }
 
     pipeline.buildPipeline();
 
-    // new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructDev", {
-    //   deployEnv: DeployEnvEnum.DEV,
-    //   pipelineName: pipeline.pipeline.pipelineName,
-    //   pipelineArn: pipeline.pipeline.pipelineArn,
-    //   ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
-    // });
+    new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructDev", {
+      deployEnv: DeployEnvEnum.DEV,
+      pipelineName: pipeline.pipeline.pipelineName,
+      pipelineArn: pipeline.pipeline.pipelineArn,
+      ssmParameterName: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
+    });
 
     // new KickPipelineLambdaConstruct(this, "KickPipelineLambdaConstructStg", {
     //   deployEnv: DeployEnvEnum.STG,

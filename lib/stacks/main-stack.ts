@@ -6,6 +6,7 @@ import { CodePipelineStack } from "lib/pipelines/code-pipeline";
 interface MainStackProps extends StackProps {
   infraStatusDev: "on" | "off";
   infraStatusStg: "on" | "off";
+  trigger: string;
 }
 
 export class MainStack extends Stack {
@@ -16,6 +17,7 @@ export class MainStack extends Stack {
       env: props.env,
       infraStatusDev: props.infraStatusDev,
       infraStatusStg: props.infraStatusStg,
+      trigger: props.trigger,
     });
   }
 }

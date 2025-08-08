@@ -8,16 +8,16 @@ const app = new cdk.App();
 console.log("DEBUG: infraStatusDev", app.node.tryGetContext("infraStatusDev"));
 console.log("DEBUG: infraStatusStg", app.node.tryGetContext("infraStatusStg"));
 
-const infraStatusDev = app.node.tryGetContext("infraStatusDev") != undefined ? app.node.tryGetContext("infraStatusDev") : "on";
-if (infraStatusDev !== "on" && infraStatusDev !== "off")
-  throw new Error('Invalid infra status. Only accept on or off');
-
-const infraStatusStg = app.node.tryGetContext("infraStatusStg") != undefined ? app.node.tryGetContext("infraStatusStg") : "on";
-if (infraStatusStg !== "on" && infraStatusStg !== "off")
-  throw new Error('Invalid infra status. Only accept on or off');
+const infraStatusDev = app.node.tryGetContext("infraStatusDev") ?? "on";
+const infraStatusStg = app.node.tryGetContext("infraStatusStg") ?? "on";
+const trigger = app.node.tryGetContext('trigger') ?? 'github';
+if (trigger !== 'github' && trigger !== 'lambda') {
+  throw new Error(`Invalid trigger value: ${trigger}. Expected 'github' or 'lambda'.`);
+}
 
 new MainStack(app, "MainStack", {
   env: { account: ACCOUNT, region: REGION },
   infraStatusDev: infraStatusDev,
   infraStatusStg: infraStatusStg,
+  trigger: trigger,
 });

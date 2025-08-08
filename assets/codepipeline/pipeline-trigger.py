@@ -33,7 +33,10 @@ def trigger_pipeline(infra_status: str):
     )
 
     logger.info(f'Updated {SSM_PARAMETER_NAME} to {infra_status}')
-    response = codepipeline.start_pipeline_execution(name=PIPELINE_NAME)
+    response = codepipeline.start_pipeline_execution(
+        name=PIPELINE_NAME,
+        variables=[{"name": "TRIGGER", "value": "lambda"}]
+    )
     logger.info(f'Pipeline started - execution id {response["pipelineExecutionId"]}')
 
 

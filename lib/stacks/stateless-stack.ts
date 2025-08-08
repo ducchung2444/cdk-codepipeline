@@ -7,23 +7,20 @@
  */
 
 import {
-  Stack,
-  StackProps,
-  RemovalPolicy,
-  Duration,
   aws_ec2 as ec2,
-  aws_elasticloadbalancingv2 as lbv2,
-  aws_ecr as ecr,
   aws_ecs as ecs,
-  aws_codedeploy as codedeploy,
-} from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-import { DeployEnvEnum } from 'lib/context/types';
+  RemovalPolicy,
+  aws_s3 as s3,
+  Stack,
+  StackProps
+} from "aws-cdk-lib";
+import { Construct } from "constructs";
+import { DeployEnvEnum } from "lib/context/types";
 
 interface StatelessResourceProps extends StackProps {
   deployEnv: DeployEnvEnum;
-  vpc: ec2.Vpc;
-  infraStatus: 'on' | 'off';
+  vpc?: ec2.Vpc;
+  infraStatus: "on" | "off";
 }
 
 export class StatelessResourceStack extends Stack {
@@ -32,5 +29,13 @@ export class StatelessResourceStack extends Stack {
 
   constructor(scope: Construct, id: string, props: StatelessResourceProps) {
     super(scope, id, props);
+
+    const { deployEnv } = props;
+
+    new s3.Bucket(this, "chungdeptrai-codepipeline-bucket", {
+      bucketName: `chungdeptrai-codepipeline-bucket-${deployEnv}`,
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
   }
 }
