@@ -2,7 +2,11 @@ import { pipelines, Stack, StackProps, aws_iam as iam } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { AppStage } from 'lib/stages/app-stage';
 import { CODE_CONNECTION_ARN, REPO_BRANCH, REPO_STRING } from 'lib/configs/env';
-import { ENV_SSM_PARAMETER, INFRA_STATUS_SSM_PARAMETER } from 'lib/configs/constants';
+import {
+  ENV_SSM_PARAMETER,
+  INFRA_STATUS_SSM_PARAMETER,
+  LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
+} from 'lib/configs/constants';
 import { DeployEnvEnum } from 'lib/context/types';
 import { KickPipelineLambdaConstruct } from 'lib/constructs/kick-pipeline-lambda';
 
@@ -46,8 +50,8 @@ export class CodePipelineStack extends Stack {
           ENV_SSM_PARAMETER: ENV_SSM_PARAMETER,
           INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
           INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
+          LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
           PROJECT: 'learn-codepipeline',
-          PIPELINE_EXECUTION_ID: '#{codepipeline.PipelineExecutionId}',
         },
         commands: ['chmod +x assets/codepipeline/commands.bash', './assets/codepipeline/commands.bash'],
         rolePolicyStatements: [
@@ -104,18 +108,17 @@ export class CodePipelineStack extends Stack {
     });
 
     pipeline.addStage(devStage);
-
-    if (trigger === 'github') {
-      pipeline.addStage(stgStage, {
-        pre: [
-          new pipelines.ManualApprovalStep('prod-deployment-approval', {
-            comment: `comment`,
-            reviewUrl: `https://infra.shirokumapower.jp/`,
-          }),
-        ],
-      });
-    }
-
+    pipeline.addStage(stgStage, {
+      pre: [
+        ...(trigger !== 'github'
+          ? [new pipelines.CodeBuildStep('exit', { commands: ['exit 1'] })]
+          : []),
+        new pipelines.ManualApprovalStep('prod-deployment-approval', {
+          comment: 'comment',
+          reviewUrl: 'https://infra.shirokumapower.jp/',
+        }),
+      ],
+    });
     pipeline.buildPipeline();
 
     new KickPipelineLambdaConstruct(this, 'KickPipelineLambdaConstructDev', {

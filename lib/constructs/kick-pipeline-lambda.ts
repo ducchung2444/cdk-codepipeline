@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { aws_iam as iam, aws_lambda as lambda, aws_logs as logs, Duration } from 'aws-cdk-lib';
 import { DeployEnvEnum } from 'lib/context/types';
 import { ACCOUNT, REGION } from 'lib/configs/env';
-import { INFRA_STATUS_SSM_PARAMETER } from 'lib/configs/constants';
+import { INFRA_STATUS_SSM_PARAMETER, LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER } from 'lib/configs/constants';
 
 interface KickPipelineLambdaConstructProps {
   deployEnv: DeployEnvEnum.DEV | DeployEnvEnum.STG;
@@ -29,7 +29,8 @@ export class KickPipelineLambdaConstruct extends Construct {
         }),
         environment: {
           PIPELINE_NAME: pipelineName,
-          SSM_PARAMETER_NAME: ssmParameterName,
+          INFRA_STATUS_SSM_PARAMETER_NAME: ssmParameterName,
+          LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER_NAME: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
         },
         timeout: Duration.minutes(5),
         logRetention: logs.RetentionDays.ONE_WEEK,
@@ -52,6 +53,7 @@ export class KickPipelineLambdaConstruct extends Construct {
         actions: ['ssm:PutParameter', 'ssm:GetParameter'],
         resources: [
           `arn:aws:ssm:${REGION}:${ACCOUNT}:parameter${INFRA_STATUS_SSM_PARAMETER[deployEnv]}`,
+          `arn:aws:ssm:${REGION}:${ACCOUNT}:parameter${LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER}`,
         ],
       })
     );

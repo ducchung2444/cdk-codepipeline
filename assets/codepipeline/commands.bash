@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TRIGGER_VAR=$(aws ssm get-parameter --name "/pipelines/$PIPELINE_NAME/$PIPELINE_EXECUTION_ID/TRIGGER" --with-decryption --query Parameter.Value --output text)
-echo "DEBUG: Pipeline trigger ${TRIGGER_VAR}"
+LAMBDA_TRIGGER_TIMESTAMP=$(aws ssm get-parameter --name "${LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER}" --output text --query 'Parameter.Value' 2>/dev/null || echo 1)
+TRIGGER_VAR=$(python assets/codepipeline/check-lambda-trigger.py --lambda-trigger-timestamp "${LAMBDA_TRIGGER_TIMESTAMP}")
+echo "DEBUG: TRIGGER_VAR ${TRIGGER_VAR}"
 
 # 1. Fetch .env from SSM
 aws ssm get-parameter --with-decryption --name "$ENV_SSM_PARAMETER" --output text --query 'Parameter.Value' > .env
 
 # 2. Fetch infra status flags
-INFRA_STATUS_DEV=$(aws ssm get-parameter --name "$INFRA_STATUS_SSM_DEV" --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')
-INFRA_STATUS_STG=$(aws ssm get-parameter --name "$INFRA_STATUS_SSM_STG" --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')
+INFRA_STATUS_DEV=$(aws ssm get-parameter --name "${INFRA_STATUS_SSM_DEV}" --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')
+INFRA_STATUS_STG=$(aws ssm get-parameter --name "${INFRA_STATUS_SSM_STG}" --output text --query 'Parameter.Value' 2>/dev/null || echo 'on')
 
 # 3. Install Bun and set PATH
 curl -fsSL https://bun.sh/install | bash

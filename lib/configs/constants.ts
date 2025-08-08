@@ -1,11 +1,14 @@
 import { DeployEnvEnum } from "lib/context/types";
 
 export const PROJECT = "learn";
+
+// SSM PARAMETERS
 export const ENV_SSM_PARAMETER = `/cdk/${PROJECT}/env`;
 export const INFRA_STATUS_SSM_PARAMETER = {
   [DeployEnvEnum.DEV]: `/cdk/${PROJECT}/infraStatusDev`,
   [DeployEnvEnum.STG]: `/cdk/${PROJECT}/infraStatusStg`,
 };
+export const LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER = `/cdk/${PROJECT}/lambdaTriggerTimeStamp`;
 
 export const ENV_CONFIG = {
   [DeployEnvEnum.DEV]: {
