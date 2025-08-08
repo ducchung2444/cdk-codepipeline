@@ -24,23 +24,21 @@ bun x cdk synth "${CDK_CONTEXT[@]}"
 # Install ansi2html for rendering HTML diffs
 pip3 install ansi2html
 
-set -x
-
-# Generate and convert CDK diff (dev)
-{
-  echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
-  FORCE_COLOR=1 bun x cdk diff "code-pipeline/DevStage/**" "${CDK_CONTEXT[@]}" 2>&1
-} | ansi2html > cdk-diff-output-dev.html
-
 # Generate and convert CDK diff (stg)
 {
   echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
   FORCE_COLOR=1 bun x cdk diff "code-pipeline/StgStage/**" "${CDK_CONTEXT[@]}" 2>&1
 } | ansi2html > cdk-diff-output-stg.html
 
-# Upload diff HTML files to S3
-aws s3 cp cdk-diff-output-dev.html \
-  "s3://diff-file/${PROJECT}/cdk-diff-output-dev.html"
+# Generate and convert CDK diff (prod)
+{
+  echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+  FORCE_COLOR=1 bun x cdk diff "code-pipeline/ProdStage/**" "${CDK_CONTEXT[@]}" 2>&1
+} | ansi2html > cdk-diff-output-prod.html
 
+# Upload diff HTML files to S3
 aws s3 cp cdk-diff-output-stg.html \
   "s3://diff-file/${PROJECT}/cdk-diff-output-stg.html"
+
+aws s3 cp cdk-diff-output-prod.html \
+  "s3://diff-file/${PROJECT}/cdk-diff-output-prod.html"
