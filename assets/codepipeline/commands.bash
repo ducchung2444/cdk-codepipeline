@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LAMBDA_TRIGGER_TIMESTAMP=$(aws ssm get-parameter --name "${LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER}" --output text --query 'Parameter.Value' 2>/dev/null || echo 1)
-TRIGGER_VAR=$(python assets/codepipeline/check-lambda-trigger.py --lambda-trigger-timestamp "${LAMBDA_TRIGGER_TIMESTAMP}")
-echo "DEBUG: TRIGGER_VAR ${TRIGGER_VAR}"
-
-# 1. Fetch .env from SSM
+TRIGGER_SOURCE=$(python assets/codepipeline/check-lambda-trigger.py \
+                          --lambda-trigger-timestamp $(aws ssm get-parameter \
+                                                        --name "${LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER}" \
+                                                        --output text \
+                                                        --query 'Parameter.Value' 2>/dev/null || echo 1))
+echo "DEBUG: TRIGGER_SOURCE ${TRIGGER_SOURCE}" # "github" | "lambda"
+aws ssm put-parameter \
+      --name ${PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER} \
+      --value ${TRIGGER_SOURCE} \
+      --type String \
+      --overwrite
+# Fetch .env from SSM
 aws ssm get-parameter --with-decryption --name "$ENV_SSM_PARAMETER" --output text --query 'Parameter.Value' > .env
 
 # 2. Fetch infra status flags
@@ -17,8 +24,7 @@ curl -fsSL https://bun.sh/install | bash
 export PATH="$HOME/.bun/bin:$PATH"
 
 CDK_CONTEXT=(--context infraStatusDev="${INFRA_STATUS_DEV}" \
-             --context infraStatusStg="${INFRA_STATUS_STG}" \
-             --context trigger="${TRIGGER_VAR}")
+             --context infraStatusStg="${INFRA_STATUS_STG}")
 
 # 4. Install deps, run tests, synthesize
 bun install --frozen-lockfile

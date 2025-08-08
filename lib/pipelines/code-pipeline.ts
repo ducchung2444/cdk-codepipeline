@@ -6,6 +6,7 @@ import {
   ENV_SSM_PARAMETER,
   INFRA_STATUS_SSM_PARAMETER,
   LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
+  PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER,
 } from 'lib/configs/constants';
 import { DeployEnvEnum } from 'lib/context/types';
 import { KickPipelineLambdaConstruct } from 'lib/constructs/kick-pipeline-lambda';
@@ -13,14 +14,13 @@ import { KickPipelineLambdaConstruct } from 'lib/constructs/kick-pipeline-lambda
 interface CodePipelineStackProps extends StackProps {
   infraStatusDev: 'on' | 'off';
   infraStatusStg: 'on' | 'off';
-  trigger: string;
 }
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: CodePipelineStackProps) {
     super(scope, id, props);
 
-    const { env, infraStatusDev, infraStatusStg, trigger } = props;
+    const { env, infraStatusDev, infraStatusStg } = props;
 
     const devStage = new AppStage(this, 'DevStage', {
       env: env,
@@ -51,6 +51,7 @@ export class CodePipelineStack extends Stack {
           INFRA_STATUS_SSM_DEV: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.DEV],
           INFRA_STATUS_SSM_STG: INFRA_STATUS_SSM_PARAMETER[DeployEnvEnum.STG],
           LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER: LAMBDA_TRIGGER_TIMESTAMP_SSM_PARAMETER,
+          PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER,
           PROJECT: 'learn-codepipeline',
         },
         commands: ['chmod +x assets/codepipeline/commands.bash', './assets/codepipeline/commands.bash'],
@@ -110,9 +111,12 @@ export class CodePipelineStack extends Stack {
     pipeline.addStage(devStage);
     pipeline.addStage(stgStage, {
       pre: [
-        ...(trigger !== 'github'
-          ? [new pipelines.CodeBuildStep('exit', { commands: ['exit 1'] })]
-          : []),
+        new pipelines.CodeBuildStep('exit', {
+          env: {
+            PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER: PIPELINE_TRIGGER_SOURCE_SSM_PARAMETER
+          },
+          commands: ['chmod +x assets/codepipeline/pre-stg-stage-commands.bash', './assets/codepipeline/pre-stg-stage-commands.bash'],
+        }),
         new pipelines.ManualApprovalStep('prod-deployment-approval', {
           comment: 'comment',
           reviewUrl: 'https://infra.shirokumapower.jp/',

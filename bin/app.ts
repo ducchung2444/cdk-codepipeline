@@ -10,14 +10,9 @@ console.log("DEBUG: infraStatusStg", app.node.tryGetContext("infraStatusStg"));
 
 const infraStatusDev = app.node.tryGetContext("infraStatusDev") ?? "on";
 const infraStatusStg = app.node.tryGetContext("infraStatusStg") ?? "on";
-let trigger = app.node.tryGetContext('trigger') ?? 'github';
-if (trigger !== 'github' && trigger !== 'lambda') {
-  trigger = 'github';
-}
 
 new MainStack(app, "MainStack", {
   env: { account: ACCOUNT, region: REGION },
   infraStatusDev: infraStatusDev,
   infraStatusStg: infraStatusStg,
-  trigger: trigger,
 });
