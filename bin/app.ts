@@ -10,9 +10,9 @@ console.log("DEBUG: infraStatusStg", app.node.tryGetContext("infraStatusStg"));
 
 const infraStatusDev = app.node.tryGetContext("infraStatusDev") ?? "on";
 const infraStatusStg = app.node.tryGetContext("infraStatusStg") ?? "on";
-const trigger = app.node.tryGetContext('trigger') ?? 'github';
+let trigger = app.node.tryGetContext('trigger') ?? 'github';
 if (trigger !== 'github' && trigger !== 'lambda') {
-  throw new Error(`Invalid trigger value: ${trigger}. Expected 'github' or 'lambda'.`);
+  trigger = 'github';
 }
 
 new MainStack(app, "MainStack", {
