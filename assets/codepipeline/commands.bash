@@ -22,7 +22,7 @@ bun x cdk synth "${CDK_CONTEXT[@]}"
 
 
 # Install ansi2html for rendering HTML diffs
-pip3 install ansi2html
+pip3 install --root-user-action ansi2html
 
 # Generate and convert CDK diff (stg)
 {
