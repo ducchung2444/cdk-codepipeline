@@ -53,7 +53,7 @@ export class CodePipelineStack extends Stack {
           },
         },
         commands: [
-          'chmod +x assets/codepipeline/commands.bash',
+          // 'chmod +x assets/codepipeline/commands.bash',
           './assets/codepipeline/commands.bash',
         ],
         rolePolicyStatements: [
