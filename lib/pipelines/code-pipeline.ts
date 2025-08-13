@@ -35,13 +35,13 @@ export class CodePipelineStack extends Stack {
       stageName: 'ProdStage',
     });
 
-    const base = new codepipeline.Pipeline(this, `${PROJECT}-cp`, {
-      pipelineName: `${PROJECT}-cdk-pipeline`,
-      pipelineType: codepipeline.PipelineType.V2,  // ← v2 required for pipeline variables & stage conditions
-    });
+    // const base = new codepipeline.Pipeline(this, `${PROJECT}-cp`, {
+    //   pipelineName: `${PROJECT}-cdk-pipeline`,
+    //   pipelineType: codepipeline.PipelineType.V2,  // ← v2 required for pipeline variables & stage conditions
+    // });
 
     const pipeline = new pipelines.CodePipeline(this, `learn-code-pipeline`, {
-      codePipeline: base,
+      // codePipeline: base,
       synth: new pipelines.CodeBuildStep(`project-synth`, {
         input: pipelines.CodePipelineSource.connection(REPO_STRING, REPO_BRANCH, { connectionArn: CODE_CONNECTION_ARN }),
         buildEnvironment: {
@@ -114,12 +114,13 @@ export class CodePipelineStack extends Stack {
     pipeline.buildPipeline();
 
     // Add a BeforeEntry → VariableCheck rule on the "Prod" stage to SKIP it unless TRIGGER_SOURCE == "github"
-    const prodIndex = base.stages.findIndex(s => s.stageName === 'ProdStage');
+    // const prodIndex = base.stages.findIndex(s => s.stageName === 'ProdStage');
+    const prodIndex = pipeline.pipeline.stages.findIndex(s => s.stageName === 'ProdStage');
     if (prodIndex === -1) {
       throw new Error('Prod stage not found in the generated pipeline');
     }
 
-    const cfn = base.node.defaultChild as codepipeline.CfnPipeline;
+    const cfn = pipeline.pipeline.node.defaultChild as codepipeline.CfnPipeline;
     cfn.variables = [
       {
         name: 'TRIGGER_SOURCE',
